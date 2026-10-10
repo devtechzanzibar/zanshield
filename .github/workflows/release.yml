@@ -32,9 +32,14 @@ jobs:
           java-version: "17"
           cache: maven
 
+      # The Maven Wrapper pins Maven 3.9.11 (.mvn/wrapper), so the runner builds the same bundle as a
+      # developer's machine. The runner image's own Maven put local-repository files in the bundle.
+      - name: Show the Maven version
+        run: ./mvnw --version
+
       - name: Check the tag matches the pom version
         run: |
-          POM_VERSION=$(mvn --batch-mode -q -DforceStdout help:evaluate -Dexpression=project.version)
+          POM_VERSION=$(./mvnw --batch-mode -q -DforceStdout help:evaluate -Dexpression=project.version)
           if [ "v$POM_VERSION" != "$GITHUB_REF_NAME" ]; then
             echo "::error::Tag $GITHUB_REF_NAME does not match pom version $POM_VERSION"
             # What was uploaded, so a Portal validation error can be matched to a file.
@@ -63,7 +68,7 @@ jobs:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
         run: |
           set -o pipefail
-          if ! mvn --batch-mode --no-transfer-progress -s ci/settings.xml -Prelease -Dcentral.autoPublish=true deploy 2>&1 | tee maven.log; then
+          if ! ./mvnw --batch-mode --no-transfer-progress -s ci/settings.xml -Prelease -Dcentral.autoPublish=true deploy 2>&1 | tee maven.log; then
             set +e +o pipefail
             # What was uploaded, so a Portal validation error can be matched to a file.
             if [ -f target/central-publishing/central-bundle.zip ]; then
