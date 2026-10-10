@@ -25,8 +25,8 @@ jobs:
       name: maven-central
       url: https://central.sonatype.com/artifact/tz.co.devtech/zanshield-sdk
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -57,4 +57,13 @@ jobs:
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
           MAVEN_GPG_KEY: ${{ secrets.MAVEN_GPG_KEY }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-        run: mvn --batch-mode --no-transfer-progress -s ci/settings.xml -Prelease -Dcentral.autoPublish=true deploy
+        run: |
+          set -o pipefail
+          if ! mvn --batch-mode --no-transfer-progress -s ci/settings.xml -Prelease -Dcentral.autoPublish=true deploy 2>&1 | tee maven.log; then
+            # Surface Maven's own error lines as annotations, so the reason shows on the run summary.
+            # GitHub masks any secret values in them.
+            grep -E '^\[ERROR\]' maven.log | grep -vE 'Re-run Maven|full stack trace|Help 1|^\[ERROR\] *$|For more information|cwiki.apache.org' | head -15 | while IFS= read -r line; do
+              echo "::error title=Maven deploy failed::${line#\[ERROR\] }"
+            done
+            exit 1
+          fi
