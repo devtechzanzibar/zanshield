@@ -62,8 +62,8 @@ jobs:
           if ! mvn --batch-mode --no-transfer-progress -s ci/settings.xml -Prelease -Dcentral.autoPublish=true deploy 2>&1 | tee maven.log; then
             # Surface Maven's own error lines as annotations, so the reason shows on the run summary.
             # GitHub masks any secret values in them.
-            grep -E '^\[ERROR\]' maven.log | grep -vE 'Re-run Maven|full stack trace|Help 1|^\[ERROR\] *$|For more information|cwiki.apache.org' | head -15 | while IFS= read -r line; do
-              echo "::error title=Maven deploy failed::${line#\[ERROR\] }"
+            grep -E '^\[ERROR\]' maven.log | grep -vE 'Re-run Maven|full stack trace|^\[ERROR\] *$|For more information|cwiki.apache.org|^\[ERROR\] \[Help' | sed -e 's/^\[ERROR\] //' -e 's/ -> \[Help 1\]$//' | head -8 | while IFS= read -r line; do
+              echo "::error title=Maven deploy failed::$line"
             done
             exit 1
           fi
