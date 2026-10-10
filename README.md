@@ -65,17 +65,6 @@ try {
 
 `ZanShieldClient` is thread-safe, so create one and share it.
 
-### "Add an MFA method" button
-
-To let a signed-in user add another method (for example, a security key on top of their authenticator app), build the same ticket and ask for the add flow:
-
-```java
-String ticket = client.createTicket(user.getId(), user.getEmail(), user.getFullName(), user.getPhone());
-response.sendRedirect(ZanShieldClient.portalUrl(PORTAL, ticket, true));
-```
-
-The user verifies with an existing method and is then taken straight to adding a new one. Users can't remove methods themselves; your institution admin does that in the administration console.
-
 ### More than one server
 
 By default, used `txnID`s are remembered in memory, which protects a single JVM. If your application runs on several servers, implement `TxnIdStore` over something they share:
@@ -94,7 +83,6 @@ client.withTxnIdStore((txnId, keepUntil) ->
 
 - The Maven coordinates changed to `tz.co.devtech:zanshield-sdk`, and the package to `tz.co.devtech.zanshield`: replace `import tz.go.egaz.zanshield.sdk.*` with `import tz.co.devtech.zanshield.*`.
 - `RequestType` is gone. ZanShield now decides whether the user registers or verifies. Use `createTicket(userId, email, fullName, mobile)`.
-- For an "add a method" button, use `portalUrl(..., true)` instead of a `REGISTRATION` ticket.
 - Replace your own `openAcknowledgement` checks with `acceptAcknowledgement`.
 
 ## License
