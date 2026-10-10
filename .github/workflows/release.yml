@@ -37,6 +37,10 @@ jobs:
           POM_VERSION=$(mvn --batch-mode -q -DforceStdout help:evaluate -Dexpression=project.version)
           if [ "v$POM_VERSION" != "$GITHUB_REF_NAME" ]; then
             echo "::error::Tag $GITHUB_REF_NAME does not match pom version $POM_VERSION"
+            # What was uploaded, so a Portal validation error can be matched to a file.
+            if [ -f target/central-publishing/central-bundle.zip ]; then
+              unzip -Z1 target/central-publishing/central-bundle.zip | sort | tr '\n' ' ' | sed 's/^/::notice title=Bundle contents::/'; echo
+            fi
             exit 1
           fi
 
