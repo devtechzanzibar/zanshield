@@ -64,10 +64,16 @@ jobs:
         run: |
           set -o pipefail
           if ! mvn --batch-mode --no-transfer-progress -s ci/settings.xml -Prelease -Dcentral.autoPublish=true deploy 2>&1 | tee maven.log; then
-            # Surface Maven's own error lines as annotations, so the reason shows on the run summary.
+            set +e +o pipefail
+            # What was uploaded, so a Portal validation error can be matched to a file.
+            if [ -f target/central-publishing/central-bundle.zip ]; then
+              echo "::notice title=Bundle contents::$(unzip -Z1 target/central-publishing/central-bundle.zip | sort | tr '\n' ' ')"
+            else
+              echo "::notice title=Bundle contents::no bundle at target/central-publishing/central-bundle.zip; found: $(find target -name '*.zip' | tr '\n' ' ')"
+            fi
+            # Maven's own error lines as annotations, so the reason shows on the run summary.
             # GitHub masks any secret values in them.
-            grep -E '^\[ERROR\]' maven.log | grep -vE 'Re-run Maven|full stack trace|^\[ERROR\] *$|For more information|cwiki.apache.org|^\[ERROR\] \[Help' | sed -e 's/^\[ERROR\] //' -e 's/ -> \[Help 1\]$//' | head -8 | while IFS= read -r line; do
-              echo "::error title=Maven deploy failed::$line"
-            done
+            grep -E '^\[ERROR\]' maven.log | grep -vE 'Re-run Maven|full stack trace|^\[ERROR\] *$|For more information|cwiki.apache.org|^\[ERROR\] \[Help' | sed -e 's/^\[ERROR\] //' -e 's/ -> \[Help 1\]$//' > errors.txt
+            head -8 errors.txt | while IFS= read -r line; do echo "::error title=Maven deploy failed::$line"; done
             exit 1
           fi
