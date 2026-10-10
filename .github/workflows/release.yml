@@ -1,0 +1,60 @@
+# Publishes tz.co.devtech:zanshield-sdk to Maven Central when a version tag such as v1.0.0 is pushed.
+# See RELEASING.md for the one-time setup. Secrets live in the "maven-central" environment
+# (Settings → Environments), so only this job can read them:
+#   CENTRAL_TOKEN_USERNAME, CENTRAL_TOKEN_PASSWORD  user token from central.sonatype.com
+#   MAVEN_GPG_KEY                                   armored private signing key
+#   MAVEN_GPG_PASSPHRASE                            its passphrase
+name: Release to Maven Central
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: read
+
+# Never run two releases at once, and never cancel one halfway through an upload.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: maven-central
+      url: https://central.sonatype.com/artifact/tz.co.devtech/zanshield-sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Check the tag matches the pom version
+        run: |
+          POM_VERSION=$(mvn --batch-mode -q -DforceStdout help:evaluate -Dexpression=project.version)
+          if [ "v$POM_VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match pom version $POM_VERSION"
+            exit 1
+          fi
+
+      - name: Check the secrets are set
+        env:
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          MAVEN_GPG_KEY: ${{ secrets.MAVEN_GPG_KEY }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: |
+          for name in CENTRAL_TOKEN_USERNAME CENTRAL_TOKEN_PASSWORD MAVEN_GPG_KEY MAVEN_GPG_PASSPHRASE; do
+            if [ -z "${!name}" ]; then echo "::error::Secret $name is not set in the maven-central environment"; exit 1; fi
+          done
+
+      - name: Sign, upload and publish
+        env:
+          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          MAVEN_GPG_KEY: ${{ secrets.MAVEN_GPG_KEY }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+        run: mvn --batch-mode --no-transfer-progress -s ci/settings.xml -Prelease -Dcentral.autoPublish=true deploy

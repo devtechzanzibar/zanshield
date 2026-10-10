@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>tz.co.devtech</groupId>
+    <artifactId>zanshield-sdk</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>ZanShield SDK for Java</name>
+    <description>Client library for integrating a system with ZanShield, eGAZ's multi-factor authentication
+        service: builds signed, encrypted tickets and verifies ZanShield's acknowledgements.</description>
+    <url>https://zanshield.egaz.go.tz</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>DevTech</name>
+            <organization>DevTech</organization>
+            <organizationUrl>https://devtech.co.tz</organizationUrl>
+        </developer>
+    </developers>
+
+    <!-- Maven Central requires an SCM section: the SDK's own GitHub repository, which also publishes it (.github/workflows/release.yml). -->
+    <scm>
+        <url>https://github.com/devtechzanzibar/zanshield</url>
+        <connection>scm:git:https://github.com/devtechzanzibar/zanshield.git</connection>
+        <developerConnection>scm:git:git@github.com:devtechzanzibar/zanshield.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/devtechzanzibar/zanshield/issues</url>
+    </issueManagement>
+
+    <properties>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jackson.version>2.17.2</jackson.version>
+        <junit.version>5.10.3</junit.version>
+        <!-- false: upload and validate only, then press "Publish" on central.sonatype.com.
+             The release workflow sets it to true, so a version tag goes all the way to Maven Central. -->
+        <central.autoPublish>false</central.autoPublish>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!--
+          Everything Maven Central needs on top of a normal build: sources and javadoc jars, GPG
+          signatures, and the upload itself. See RELEASING.md:  mvn -Prelease deploy
+        -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.8.0</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.7</version>
+                        <configuration>
+                            <!-- Signs inside Maven (Bouncy Castle), so no gpg program or keyring is needed.
+                                 The armored private key comes from MAVEN_GPG_KEY and its passphrase from
+                                 MAVEN_GPG_PASSPHRASE: GitHub secrets in the release workflow, exported in your shell
+                                 for a release from your own machine. -->
+                            <signer>bc</signer>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.8.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <!-- Matches the <server><id> in ~/.m2/settings.xml holding the Central Portal token. -->
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>${central.autoPublish}</autoPublish>
+                            <!-- With autoPublish, wait until Maven Central has it, so a failure fails the job. -->
+                            <waitUntil>published</waitUntil>
+                            <deploymentName>ZanShield SDK for Java ${project.version}</deploymentName>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>
